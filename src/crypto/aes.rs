@@ -51,35 +51,35 @@ pub fn aes(message: &str, key: &[u8], aes_type: AesType) -> String {
 
     let ex_key: [u32; 44] = extend_key(&key_bytes);
     println!("{:?}", ex_key);
-    for mut block in message_blocks {
-        add_round_key(&mut block, &ex_key, 0);
+    for mut state in message_blocks {
+        add_round_key(&mut state, &ex_key, 0);
 
         // from 1 to 9
         for round in 1..loop_num {
-            sub_byte(&mut block);
-            println!("after sub_byte: {:?}", &block);
-            shift_rows(&mut block);
-            println!("after shift_rows: {:?}", &block);
-            mix_cols(&mut block);
-            println!("after mix_cols: {:?}", &block);
-            add_round_key(&mut block, &ex_key, round);
-            println!("after add_round_key: {:?}, {round}", &block);
+            sub_byte(&mut state);
+            println!("after sub_byte: {:?}", &state);
+            shift_rows(&mut state);
+            println!("after shift_rows: {:?}", &state);
+            mix_cols(&mut state);
+            println!("after mix_cols: {:?}", &state);
+            add_round_key(&mut state, &ex_key, round);
+            println!("after add_round_key: {:?}, {round}", &state);
         }
 
         // tenth
-        sub_byte(&mut block);
-        shift_rows(&mut block);
-        add_round_key(&mut block, &ex_key, 10);
+        sub_byte(&mut state);
+        shift_rows(&mut state);
+        add_round_key(&mut state, &ex_key, 10);
 
-        for sub_block in block {
-            res.push_str(&format!("{:08x}", u32::from_be_bytes(sub_block)))
+        for sub_state in state {
+            res.push_str(&format!("{:08x}", u32::from_be_bytes(sub_state)))
         }
     }
 
     res
 }
 
-fn sub_byte(block: &mut [[u8; 4]; 4]) {
+fn sub_byte(state: &mut [[u8; 4]; 4]) {
     let s_box: [[u8; 16]; 16] = [
         [
             0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7,
@@ -146,8 +146,8 @@ fn sub_byte(block: &mut [[u8; 4]; 4]) {
             0xbb, 0x16,
         ],
     ];
-    for sub_block in block {
-        for byte in sub_block {
+    for sub_state in state {
+        for byte in sub_state {
             *byte = s_box[((*byte & 0xF0) >> 4) as usize][(*byte & 0x0F) as usize];
         }
     }
@@ -162,12 +162,12 @@ fn t(word: u32, round: u8) -> u32 {
     //byte cycle
     let w = word.rotate_left(8);
 
-    let mut bytes_block = [w.to_be_bytes(); 4];
+    let mut bytes_state = [w.to_be_bytes(); 4];
 
     //sub byte
-    sub_byte(&mut bytes_block);
+    sub_byte(&mut bytes_state);
 
-    u32::from_be_bytes(bytes_block[0]) ^ rcon[round as usize]
+    u32::from_be_bytes(bytes_state[0]) ^ rcon[round as usize]
 }
 
 fn extend_key(key_bytes: &Vec<u8>) -> [u32; 44] {
@@ -194,14 +194,18 @@ fn extend_key(key_bytes: &Vec<u8>) -> [u32; 44] {
     ex_key
 }
 
-fn add_round_key(block: &mut [[u8; 4]; 4], ex_key: &[u32; 44], round: u8) {
+fn add_round_key(state: &mut [[u8; 4]; 4], ex_key: &[u32; 44], round: u8) {
     for i in 0..4 {
         let key_bytes = ex_key[4 * (round as usize) + i].to_be_bytes();
+
+        println!("before: {:?}", &state);
+        println!("key_bytes: {:?}", &key_bytes);
         // xor byte one by one
-        block[0][i] ^= key_bytes[0];
-        block[1][i] ^= key_bytes[1];
-        block[2][i] ^= key_bytes[2];
-        block[3][i] ^= key_bytes[3];
+        state[0][i] ^= key_bytes[0];
+        state[1][i] ^= key_bytes[1];
+        state[2][i] ^= key_bytes[2];
+        state[3][i] ^= key_bytes[3];
+        println!("after: {:?}", &state);
 
     }
 }
@@ -217,19 +221,19 @@ fn shift_row(row: &mut [u8; 4], num: u8) {
     }
 }
 
-fn shift_rows(block: &mut [[u8; 4]; 4]) {
+fn shift_rows(state: &mut [[u8; 4]; 4]) {
     for i in 0..4 as u8 {
-        shift_row(&mut block[i as usize], i);
+        shift_row(&mut state[i as usize], i);
     }
 }
 
 fn gf_mul(n1: u8, n2: u8) -> u8 {
-    let gf: &dyn Fn(u8) -> u8 = &|mut n2| {
-        if (n2 & 0x80) == 0 {
-            n2 << 1
+    let gf: &dyn Fn(u8) -> u8 = &|mut byte| {
+        if (byte & 0x80) == 0 {
+            byte << 1
         } else {
-            n2 <<= 1;
-            n2 ^ 0x1B
+            byte <<= 1;
+            byte ^ 0x1B
         }
     };
     match n1 {
@@ -240,15 +244,20 @@ fn gf_mul(n1: u8, n2: u8) -> u8 {
     }
 }
 
-fn mix_cols(block: &mut [[u8; 4]; 4]) {
+fn mix_cols(state: &mut [[u8; 4]; 4]) {
     let mix_cols_matrix: [[u8; 4]; 4] = [[2, 3, 1, 1], [1, 2, 3, 1], [1, 1, 2, 3], [3, 1, 1, 2]];
-    let block_old: [[u8; 4]; 4] = block.clone();
+    let state_old: [[u8; 4]; 4] = state.clone();
     for i in 0..4 {
         for j in 0..4 {
-            block[i][j] = gf_mul(mix_cols_matrix[i][0], block_old[0][j])
-                ^ gf_mul(mix_cols_matrix[i][1], block_old[1][j])
-                ^ gf_mul(mix_cols_matrix[i][2], block_old[2][j])
-                ^ gf_mul(mix_cols_matrix[i][3], block_old[3][j]);
+            println!("{} x {}: {}", mix_cols_matrix[i][0], state_old[0][j], gf_mul(mix_cols_matrix[i][0], state_old[0][j]));
+            println!("{} x {}: {}", mix_cols_matrix[i][1], state_old[1][j], gf_mul(mix_cols_matrix[i][1], state_old[1][j]));
+            println!("{} x {}: {}", mix_cols_matrix[i][2], state_old[2][j], gf_mul(mix_cols_matrix[i][2], state_old[2][j]));
+            println!("{} x {}: {}", mix_cols_matrix[i][3], state_old[3][j], gf_mul(mix_cols_matrix[i][3], state_old[3][j]));
+            state[i][j] = gf_mul(mix_cols_matrix[i][0], state_old[0][j])
+                ^ gf_mul(mix_cols_matrix[i][1], state_old[1][j])
+                ^ gf_mul(mix_cols_matrix[i][2], state_old[2][j])
+                ^ gf_mul(mix_cols_matrix[i][3], state_old[3][j]);
+            println!("state[i][j]: {}", state[i][j]);
         }
     }
 }
