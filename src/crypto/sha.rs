@@ -325,7 +325,7 @@ mod hash_test {
     use std::{env, fs};
     #[test]
     fn hash() {
-        let args: Vec<String> = env::args().collect();
+        let _args: Vec<String> = env::args().collect();
 
         //let query = &args[2];
         let query = &String::from("sha256");
