@@ -8,25 +8,33 @@ mod aes_cfg;
 use aes_cfg::*;
 
 #[cfg(test)]
-mod aes_ecb_test {
+mod aes_tests {
     use super::*;
     #[test]
-    fn aes128_test() {
+    fn aes_ecb_test() {
         let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
-        let aes_key: [u8; 16] = [
-            0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02,
-            0x03, 0x04,
-        ];
-        //let aes_type = AesType::AES128;
-        print!("{:?}", aes_ecb(&plain_text, &aes_key, AesType::AES128));
-        // assert_eq!(
-        //     aes(&plain_text, &aes_key, aes_type),
-        //     String::from("U2FsdGVkX19VH7uYOh64K8U3bovtKCbdKTy/Cpgo6V2nCiEEwAAE39WiKnVldrMB")
-        // );
+        let aes_key = String::from("abcdabcdabcdabcd").into_bytes();
+        print!("{:?}", aes_ecb_enc(&plain_text, &aes_key, AesType::AES128));
+        assert_eq!(
+             aes_ecb_enc(&plain_text, &aes_key, AesType::AES128),
+             String::from("30e1afaf9c36e4814f2abfd05c76cf12")
+        );
     }
+    #[test]
+    fn aes_cbc_test() {
+        let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
+        let aes_key  = String::from("abcdabcdabcdabcd").into_bytes();
+        let iv  = String::from("abcdabcdabcdabcd").into_bytes();
+        print!("{:?}", aes_cbc_enc(&plain_text, &aes_key, &iv, AesType::AES128));
+        assert_eq!(
+            aes_cbc_enc(&plain_text, &aes_key, &iv, AesType::AES128),
+            String::from("8131ea8c4597cfcfdc096a878e65d35b")
+        );
+    }
+
 }
 
-pub fn aes_ecb(message: &str, key: &[u8], aes_type: AesType) -> String {
+pub fn aes_ecb_enc(message: &str, key: &[u8], aes_type: AesType) -> String {
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
     for chunk in message.as_bytes().chunks(16) {
@@ -49,7 +57,41 @@ pub fn aes_ecb(message: &str, key: &[u8], aes_type: AesType) -> String {
     res
 }
 
-//fn round(state: 
+pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: AesType) -> String {
+    let mut message_blocks: Vec<Vec<u8>> = Vec::new();
+
+    for chunk in message.as_bytes().chunks(16) {
+        message_blocks.push(chunk.to_vec());
+    }
+
+    let mut res: String = String::new();
+
+    let mut blocks_iter = message_blocks.iter_mut();
+
+    let mut state_first = blocks_iter.next().unwrap();
+    for (i, byte) in iv.iter().enumerate() {
+            state_first[i] ^= byte;
+    }
+
+    let key_bytes: Vec<u8> = Vec::from(key);
+
+    let expanded_key: Vec<u32> = key_expansion(&key_bytes);
+
+    cipher(&mut state_first, &expanded_key, &aes_type);
+
+    for mut state in blocks_iter {
+        cipher(&mut state, &expanded_key, &aes_type);
+    }
+
+    for state in message_blocks {
+        for byte in state {
+            res.push_str(&format!("{:02x}", byte))
+        }
+    }
+
+
+    res
+}
 
 fn cipher(state: &mut [u8], expanded_key: &[u32], aes_type: &AesType) {
     let loop_num: usize = match aes_type {
@@ -60,7 +102,7 @@ fn cipher(state: &mut [u8], expanded_key: &[u32], aes_type: &AesType) {
 
     add_round_key(state, &expanded_key[0..4]);
 
-    // from 1 to 9
+    // round
     for round in 1..loop_num {
 
         let round_key: &[u32] = &expanded_key[4*round..(4*round+4)];
@@ -72,7 +114,7 @@ fn cipher(state: &mut [u8], expanded_key: &[u32], aes_type: &AesType) {
 
     }
 
-    // tenth
+    // final round 
     byte_sub(state);
     shift_rows(state);
     add_round_key(state, &expanded_key[40..44]);
@@ -86,10 +128,12 @@ fn byte_sub(state: &mut [u8]) {
 }
 
 fn t(word: u32, round: u8) -> u32 {
-    //byte cycle
-    let w = word.rotate_left(8);
 
-    let mut bytes = w.to_be_bytes();
+    let mut bytes = word.to_be_bytes();
+
+    //byte cycle
+    bytes.rotate_left(1);
+
 
     //byte sub
     byte_sub(&mut bytes);
@@ -100,9 +144,9 @@ fn t(word: u32, round: u8) -> u32 {
 fn key_expansion(key_bytes: &[u8]) -> Vec<u32> {
     let mut expanded_key: Vec<u32> =  Vec::new();
 
-    // convert key to u32 array
+    // convert key to u32
     for chunk in key_bytes.chunks(4) {
-        expanded_key.push(u32::from_be_bytes(chunk.try_into().unwrap()));
+        expanded_key.push(u32::from_be_bytes(chunk.try_into().expect("Convert chunk to u32 failed!")));
     }
 
     let mut round: u8 = 0;
@@ -136,21 +180,19 @@ fn add_round_key(state: &mut [u8], expanded_key: &[u32]) {
     }
 }
 
-
 fn shift_row(arr: &mut [u8]) {
     // left shift
-    let byte: u8 = arr[0];
-    arr[0] = arr[1];
-    arr[1] = arr[2];
-    arr[2] = arr[3];
-    arr[3] = byte;
+    let first: u8 = arr[0];
+    for col in (0..9).step_by(4) {
+        arr[col] = arr[col+4];
+    }
+    arr[12] = first;
 }
 
 fn shift_rows(state: &mut [u8]) {
-    for i in 0..4 {
-        for _ in 0..i {
-            let row = 4*i;
-            shift_row(&mut state[row..(row+4)]);
+    for row in 0..4 {
+        for _ in 0..row {
+            shift_row(&mut state[row..]);
         }
     }
 }
@@ -173,16 +215,18 @@ fn gf_mul(n1: u8, n2: u8) -> u8 {
 }
 
 fn mix_cols(state: &mut [u8]) {
+
     let state_old: Vec<u8> = state.to_vec();
+
     for i in 0..4 {
         for j in 0..4 {
 
-            let row = 4*i;
+            let col = 4*j;
 
-            state[row..(row+4)][j] = gf_mul(MIX_COLS_MATRIX[i][0], state_old[0..4][j])
-                ^ gf_mul(MIX_COLS_MATRIX[i][1], state_old[4..8][j])
-                ^ gf_mul(MIX_COLS_MATRIX[i][2], state_old[8..12][j])
-                ^ gf_mul(MIX_COLS_MATRIX[i][3], state_old[12..16][j]);
+            state[col..(col+4)][i] = gf_mul(MIX_COLS_MATRIX[i][0], state_old[col..(col+4)][0])
+                                   ^ gf_mul(MIX_COLS_MATRIX[i][1], state_old[col..(col+4)][1])
+                                   ^ gf_mul(MIX_COLS_MATRIX[i][2], state_old[col..(col+4)][2])
+                                   ^ gf_mul(MIX_COLS_MATRIX[i][3], state_old[col..(col+4)][3]);
         }
     }
 }
