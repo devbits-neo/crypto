@@ -322,15 +322,10 @@ fn iteration_80(message_padding: &Vec<u8>, hash_init_values: &[u64; 8], k: &[u64
 #[cfg(test)]
 mod hash_test {
     use super::{sha, ShaType};
-    use std::{env, fs};
     #[test]
     fn hash() {
-        let _args: Vec<String> = env::args().collect();
 
-        //let query = &args[2];
         let query = &String::from("sha256");
-        //let file_path = &args[3];
-        let file_path = &String::from("sunyue");
 
         let sha_type = match query.as_str() {
             "sha224" => ShaType::SHA224,
@@ -339,12 +334,10 @@ mod hash_test {
             "sha512" => ShaType::SHA512,
             _ => ShaType::SHA256,
         };
-        let mut message =
-            fs::read_to_string(file_path).expect("Should have been able to read the file");
-        message.pop();
+        let message: String = String::from("SUNYSUNYSUNYSUNY");
         assert_eq!(
             sha(&message, sha_type),
-            String::from("9e83b875af66e8931e38b1edd29e51c8e4ed549b4fe1947f97daea138d5eb116")
+            String::from("142ea313267fe7670d878726214c30b6850a1e189edeff9cd4f769ba02371180")
         );
     }
 }
