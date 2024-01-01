@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Sub, Mul, Div, Rem};
 
 
 #[cfg(test)]
@@ -8,11 +8,12 @@ mod rsa_tests {
     fn rsa_test() {
         //let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
         //let rsa_key = String::from("abcdabcdabcdabcd").into_bytes();
-        let n1 = BigNum(String::from("ab"));
-        let n2 = BigNum(String::from("cc"));
+        let n1 = BigNum(String::from("07"));
+        let n2 = BigNum(String::from("11"));
 
-        let n3 = n1*n2;
-        println!("{:?}", n3);
+        let r = Rsa::new(n1 ,n2);
+        println!("Rsa: {:?}", r);
+
 
         //assert_eq!(
         //     rsa_enc(&plain_text, &aes_key, AesType::AES128),
@@ -21,7 +22,8 @@ mod rsa_tests {
     }
 }
 
-//struct Key(String, String)
+#[derive(Debug)]
+struct Key(BigNum, BigNum);
 #[derive(Debug, Clone)]
 struct BigNum(String);
 
@@ -30,8 +32,7 @@ impl BigNum {
         let mut iter = self.0.chars();
         let mut is_zero: bool = true;
         while let Some(c) = iter.next() {
-            
-                println!("c: {c}");
+
             if let Some(n) = c.to_digit(16) {
                 if n!= 0 {
                     is_zero = false;
@@ -40,6 +41,55 @@ impl BigNum {
             }
         }
         is_zero
+    }
+    fn greater_than(&self, rhs: &BigNum) -> bool {
+
+        let mut res: bool = true;
+        let mut iter_lhs = self.0.chars().rev();
+        let mut iter_rhs = rhs.0.chars().rev();
+
+        let mut digits_lhs: Vec<u32> = Vec::new();
+        let mut digits_rhs: Vec<u32> = Vec::new();
+
+        while let Some(c) = iter_lhs.next() {
+            if let Some(n) = c.to_digit(16) {
+                digits_lhs.push(n);         
+            }
+        }
+        while let Some(c) = iter_rhs.next() {
+            if let Some(n) = c.to_digit(16) {
+                digits_rhs.push(n);         
+            }
+        }
+        println!("{:?}, {:?}", &digits_lhs, &digits_rhs);
+        loop {
+            let mut n1 = 0;
+            let mut n2 = 0;
+
+            if let Some(x) = digits_lhs.pop() {
+                n1 = x; 
+            }
+            if let Some(x) = digits_rhs.pop() {
+                n2 = x;
+            }
+        println!("{:?}, {:?}", n1, n2);
+            if n1 > n2 {
+                res = true;
+                break;
+            }
+            else if n1 < n2 {
+                res = false;
+                break;
+            }
+            else if n1 == n2 {
+                continue;
+            }
+
+            if digits_lhs.is_empty() && digits_rhs.is_empty() {
+                break;
+            }
+        }
+        res
     }
 }
 
@@ -81,7 +131,7 @@ impl Add for BigNum {
                 n2 = x;
             }
 
-            let mut sum = n1 * n2 + carry;
+            let mut sum = n1 + n2 + carry;
 
             if sum > 15 {
                 carry = sum / 16;
@@ -145,16 +195,17 @@ impl Sub for BigNum {
 
             let mut sum: i32 = n1 as i32 - n2 as i32 - borrow;
 
-            if sum > 0 {
+            if sum >= 0 {
                 borrow = 0;
                                 
             } else {
-                sum = sum.abs();
+                sum += 16;
                 borrow = 1;
             }
 
             digits_sum.push(sum as u32);
 
+            //TODO: end the loop depends on bits of operand
             if digits_lhs.is_empty() && digits_rhs.is_empty() {
                 break;
             }
@@ -175,44 +226,106 @@ impl Mul for BigNum {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         
-        let mut product = self.clone(); 
+        let mut product = BigNum(String::from("0")); 
         let mut multiplier = rhs.clone();
-        //while !multiplier.is_zero() {
-            //product = product.clone() + product;
-            println!("{:?}", multiplier);
-            multiplier = multiplier - BigNum(String::from("cc"));
-            println!("{:?}", multiplier);
-        //}
+        while !multiplier.is_zero() {
+            product = product.clone() + self.clone();
+            multiplier = multiplier - BigNum(String::from("1"));
+        }
         product 
     }
 }
-//struct Rsa {
-//    pri_key: Key,
-//    pub_key: Key,
-//}
+
+impl Rem for BigNum {
+    type Output = Self;
+    fn rem(self, rhs: Self) -> Self {
+        
+        let mut rem = self.clone(); 
+        let mut subtrahend = rhs.clone();
+        while rem.greater_than(&rhs) {
+            rem = rem.clone() - subtrahend.clone();
+            println!("{:?}", &rem);
+        }
+        rem
+    }
+}
+impl Div for BigNum {
+    type Output = Self;
+    fn div(self, rhs: Self) -> Self {
+        
+        let mut rem = self.clone(); 
+        let mut divier = rhs.clone();
+        let mut quotient = BigNum(String::from("0"));
+        while rem.greater_than(&rhs) {
+            rem = rem.clone() - divier.clone();
+            quotient = quotient + BigNum(String::from("1"));
+        }
+        quotient
+    }
+}
+#[derive(Debug)]
+struct Rsa {
+    pri_key: Key,
+    pub_key: Key,
+}
 
 
-//impl Rsa {
-//    pub fn gen_key(&self) {
+impl Rsa {
 
-//    }
+    fn gen_key(p: BigNum, q: BigNum) -> Rsa {
+        let n: BigNum = p.clone() * q.clone();
+        let fi: BigNum = (p - BigNum(String::from("1"))) * (q - BigNum(String::from("1")));
+       // let e: BigNum = BigNum(String::from("10001"));//65537
+        let e: BigNum = BigNum(String::from("7"));//65537
+        let d: BigNum = BigNum(String::from("3"));//65537
+        println!("fi: {:?}, n: {:?}", &fi, &n);
+        //let (r, d, y) = gcd_ext(e.clone(), fi.clone());
 
-//    fn enc(byte: u8, e: &[u8], n: u32) -> u8 {
-//        let d: usize = 1;
+        Rsa {
+            pri_key: Key(d, n.clone()),
+            pub_key: Key(e, n)
+        }
+        
 
-//        for b in e {
-//            let mut shift = 0x80;
+   }
 
-//            while shift > 0 {
-//                d = (d*d)%n;
-//                if shift&b == 1 {
-//                    d = (d*a)%n;
-//                }
-//                shift >>= 1;
-//            }
-//        }
-//        d
-//    }
-//}
+    pub fn new(p: BigNum, q: BigNum) -> Rsa{
+        Self::gen_key(p, q)
+    }
+   // fn enc(byte: u8, e: &[u8], n: u32) -> u8 {
+   // }
+}
 
+fn gcd_ext(a: BigNum, b: BigNum) -> (BigNum, BigNum, BigNum){
+
+    println!("{:?}, {:?}", &a, &b);
+    if b.is_zero(){
+        let r = a;
+        let x = BigNum(String::from("1"));
+        let y = BigNum(String::from("0"));
+        (r, x, y)
+    }
+    else{
+        let rem = a.clone() % b.clone();
+        let (r, x, y1) = gcd_ext(b.clone(), rem);
+        let y = x.clone() - a / b * y1;
+        (r, x, y)
+    }
+}
+
+fn rem_fast(byte: u32, e: u32, n: u32) -> u32 {
+    let mut d: u32 = 1;
+
+    let mut shift = 0x80000000;
+
+    while shift > 0 {
+        d = (d*d)%n;
+        if shift&e != 0 {
+            d = (d*byte)%n;
+        }
+        shift >>= 1;
+        println!("{}, {}, {}", d, shift, shift&byte );
+    }
+    d
+}
 
