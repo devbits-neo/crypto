@@ -1,8 +1,10 @@
-//use crypto_lib::crypto::rsa::Rsa;
-use num_bigint::BigInt;
+use crypto_lib::crypto::rsa::Rsa;
+use num_bigint::{BigUint, BigInt, RandBigInt};
 fn main() {
-        let a = BigInt::parse_bytes(b"97F11F47FB793C58668FE46736687247370DB111BA37639170EC26467384132A993C0E2FEBA7E326E9154611317238E66F7A8C48E80714C4FB45015B7B6E81F031B55553D04A17556F860D59F0E3D6C2655B5A1079EA6ACB97E02238DAA63DF020E818E6A553CC216D27D2BB7E5EAAD7CC33B3E673618C86FCBFEAABB5AF91C9", 16);
-        
-        println!("a: {:?}", a);
+        let r = Rsa::new();
+        println!("r: {:?}", r);
+        let msg = vec![11,21,31,41];
+        let ctext = r.enc(&msg);
+        println!("r: {:?}", ctext);
 
 }

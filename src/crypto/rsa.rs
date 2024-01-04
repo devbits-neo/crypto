@@ -1,5 +1,6 @@
-use num_bigint::{BigUint, BigInt};
-
+use num_bigint::{BigUint, BigInt, ToBigInt};
+use num_integer::Integer;
+use num_traits::cast::ToPrimitive;
 #[cfg(test)]
 mod rsa_tests {
     use super::*;
@@ -22,7 +23,7 @@ mod rsa_tests {
 }
 
 #[derive(Debug)]
-struct Key(String, String);
+struct Key(BigUint, BigUint);
 
 
 #[derive(Debug)]
@@ -38,31 +39,38 @@ impl Rsa {
 
    //}
 
-    //pub fn new(p: BigNum, q: BigNum) -> Rsa{
-    //}
-   // fn enc(byte: u8, e: &[u8], n: u32) -> u8 {
-   // }
-}
+    pub fn new() -> Rsa{
+        let p: BigUint = BigUint::parse_bytes(b"106697219132480173106064317148705638676529121742557567770857687729397446898790451577487723991083173010242416863238099716044775658681981821407922722052778958942891831033512463262741053961681512908218003840408526915629689432111480588966800949428079015682624591636010678691927285321708935076221951173426894836169", 10).unwrap();
+        let q: BigUint = BigUint::parse_bytes(b"144819424465842307806353672547344125290716753535239658417883828941232509622838692761917211806963011168822281666033695157426515864265527046213326145174398018859056439431422867957079149967592078894410082695714160599647180947207504108618794637872261572262805565517756922288320779308895819726074229154002310375209", 10).unwrap();
+        let e: BigUint = BigUint::parse_bytes(b"10001", 16).unwrap();
 
-//fn gcd_ext(a: BigNum, b: BigNum, x: &mut BigNum, y: &mut BigNum) ->  BigNum {
-//}
+        let n = p.clone() * q.clone();
+        let fi = (p.clone() - 1 as u8)*(q.clone() - 1 as u8); 
 
-fn rem_fast(plaintext: u8, e: u32, n: BigUint) -> u32 {
-
-    let mut d: u8 = 1;
-
-
-
-    let mut shift = 0x80000000;
-    while shift > 0 {
-        d = (d*d)%n;
-        if shift&byte != 0 {
-            d = (d*plaintext)%n;
+        let res_gcd_ext = e.to_bigint().expect("covert to bigint fail!").extended_gcd(&fi.to_bigint().expect("covert to bigint fail!"));
+        let mut d = res_gcd_ext.x;
+        if d < 0.to_bigint().unwrap() {
+            d = d + fi.to_bigint().unwrap();
         }
-        shift >>= 1;
-        println!("{}, {}, {}", d, shift, shift&byte );
-    }    
+        Rsa {
+            pri_key: Key(d.to_biguint().unwrap(), n.clone()),
+            pub_key: Key(e, n)
+        }
 
-    d
+    }
+    pub fn enc(&self, msg: &[u8]) -> Vec<u8> {
+        let mut cipher_text: Vec<u8> = Vec::new();
+        for byte in msg {
+            let temp = BigUint::from(*byte);
+            
+            let a = temp.modpow(&self.pri_key.0, &self.pri_key.1);
+            println!("a: {:?}", &a);
+            let c = a.to_u8().unwrap();
+            cipher_text.push(c);
+        }
+        println!("{:?}", &cipher_text);
+        cipher_text
+    }
 }
+
 
