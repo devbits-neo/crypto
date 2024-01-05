@@ -2,9 +2,11 @@ use crypto_lib::crypto::rsa::Rsa;
 use num_bigint::{BigUint, BigInt, RandBigInt};
 fn main() {
         let r = Rsa::new();
-        println!("r: {:?}", r);
-        let msg = vec![11,21,31,41];
-        let ctext = r.enc(&msg);
-        println!("r: {:?}", ctext);
+        let msg = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY");
+        println!("plaintext: {:?}\n", msg.as_bytes());
+        let ctext = r.enc(&msg.as_bytes());
+        println!("ciphertext: {:?}\nlen: {}", &ctext, ctext.len());
+        let plaintext = r.dec(&ctext);
+        println!("dec text: {:?}\nlen: {}", &plaintext, plaintext.len());
 
 }

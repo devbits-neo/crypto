@@ -60,16 +60,33 @@ impl Rsa {
     }
     pub fn enc(&self, msg: &[u8]) -> Vec<u8> {
         let mut cipher_text: Vec<u8> = Vec::new();
-        for byte in msg {
-            let temp = BigUint::from(*byte);
+        let mut msg_blocks: Vec<Vec<u8>> = Vec::new();
+
+        for chunk in msg.chunks(256) {
+            msg_blocks.push(chunk.to_vec());
+        }
+        for block in msg_blocks {
+            let temp = BigUint::from_bytes_be(&block);
             
             let a = temp.modpow(&self.pri_key.0, &self.pri_key.1);
-            println!("a: {:?}", &a);
-            let c = a.to_u8().unwrap();
-            cipher_text.push(c);
+            cipher_text.append(&mut a.to_bytes_be());
         }
-        println!("{:?}", &cipher_text);
         cipher_text
+    }
+    pub fn dec(&self, cipher_text: &[u8]) -> Vec<u8> {
+        let mut plain_text: Vec<u8> = Vec::new();
+        let mut ctext_blocks: Vec<Vec<u8>> = Vec::new();
+
+        for chunk in cipher_text.chunks(256) {
+            ctext_blocks.push(chunk.to_vec());
+        }
+        for block in ctext_blocks {
+            let temp = BigUint::from_bytes_be(&block);
+            
+            let a = temp.modpow(&self.pub_key.0, &self.pub_key.1);
+            plain_text.append(&mut a.to_bytes_be());
+        }
+        plain_text
     }
 }
 
