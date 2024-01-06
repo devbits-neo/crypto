@@ -324,7 +324,6 @@ mod hash_test {
     use super::{sha, ShaType};
     #[test]
     fn hash() {
-
         let query = &String::from("sha256");
 
         let sha_type = match query.as_str() {

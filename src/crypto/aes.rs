@@ -16,22 +16,24 @@ mod aes_tests {
         let aes_key = String::from("abcdabcdabcdabcd").into_bytes();
         print!("{:?}", aes_ecb_enc(&plain_text, &aes_key, AesType::AES128));
         assert_eq!(
-             aes_ecb_enc(&plain_text, &aes_key, AesType::AES128),
-             String::from("30e1afaf9c36e4814f2abfd05c76cf12")
+            aes_ecb_enc(&plain_text, &aes_key, AesType::AES128),
+            String::from("30e1afaf9c36e4814f2abfd05c76cf12")
         );
     }
     #[test]
     fn aes_cbc_test() {
         let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
-        let aes_key  = String::from("abcdabcdabcdabcd").into_bytes();
-        let iv  = String::from("abcdabcdabcdabcd").into_bytes();
-        print!("{:?}", aes_cbc_enc(&plain_text, &aes_key, &iv, AesType::AES128));
+        let aes_key = String::from("abcdabcdabcdabcd").into_bytes();
+        let iv = String::from("abcdabcdabcdabcd").into_bytes();
+        print!(
+            "{:?}",
+            aes_cbc_enc(&plain_text, &aes_key, &iv, AesType::AES128)
+        );
         assert_eq!(
             aes_cbc_enc(&plain_text, &aes_key, &iv, AesType::AES128),
             String::from("8131ea8c4597cfcfdc096a878e65d35b")
         );
     }
-
 }
 
 pub fn aes_ecb_enc(message: &str, key: &[u8], aes_type: AesType) -> String {
@@ -70,7 +72,7 @@ pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: AesType) -> S
 
     let mut state_first = blocks_iter.next().unwrap();
     for (i, byte) in iv.iter().enumerate() {
-            state_first[i] ^= byte;
+        state_first[i] ^= byte;
     }
 
     let key_bytes: Vec<u8> = Vec::from(key);
@@ -89,7 +91,6 @@ pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: AesType) -> S
         }
     }
 
-
     res
 }
 
@@ -104,21 +105,18 @@ fn cipher(state: &mut [u8], expanded_key: &[u32], aes_type: &AesType) {
 
     // round
     for round in 1..loop_num {
-
-        let round_key: &[u32] = &expanded_key[4*round..(4*round+4)];
+        let round_key: &[u32] = &expanded_key[4 * round..(4 * round + 4)];
 
         byte_sub(state);
         shift_rows(state);
         mix_cols(state);
         add_round_key(state, round_key);
-
     }
 
-    // final round 
+    // final round
     byte_sub(state);
     shift_rows(state);
     add_round_key(state, &expanded_key[40..44]);
-
 }
 
 fn byte_sub(state: &mut [u8]) {
@@ -128,12 +126,10 @@ fn byte_sub(state: &mut [u8]) {
 }
 
 fn t(word: u32, round: u8) -> u32 {
-
     let mut bytes = word.to_be_bytes();
 
     //byte cycle
     bytes.rotate_left(1);
-
 
     //byte sub
     byte_sub(&mut bytes);
@@ -142,11 +138,13 @@ fn t(word: u32, round: u8) -> u32 {
 }
 
 fn key_expansion(key_bytes: &[u8]) -> Vec<u32> {
-    let mut expanded_key: Vec<u32> =  Vec::new();
+    let mut expanded_key: Vec<u32> = Vec::new();
 
     // convert key to u32
     for chunk in key_bytes.chunks(4) {
-        expanded_key.push(u32::from_be_bytes(chunk.try_into().expect("Convert chunk to u32 failed!")));
+        expanded_key.push(u32::from_be_bytes(
+            chunk.try_into().expect("Convert chunk to u32 failed!"),
+        ));
     }
 
     let mut round: u8 = 0;
@@ -169,14 +167,13 @@ fn add_round_key(state: &mut [u8], expanded_key: &[u32]) {
     for i in 0..4 {
         let key_bytes = expanded_key[i].to_be_bytes();
 
-        let row = 4*i;
+        let row = 4 * i;
 
         // xor byte one by one
-        state[row..(row+4)][0] ^= key_bytes[0];
-        state[row..(row+4)][1] ^= key_bytes[1];
-        state[row..(row+4)][2] ^= key_bytes[2];
-        state[row..(row+4)][3] ^= key_bytes[3];
-
+        state[row..(row + 4)][0] ^= key_bytes[0];
+        state[row..(row + 4)][1] ^= key_bytes[1];
+        state[row..(row + 4)][2] ^= key_bytes[2];
+        state[row..(row + 4)][3] ^= key_bytes[3];
     }
 }
 
@@ -184,7 +181,7 @@ fn shift_row(arr: &mut [u8]) {
     // left shift
     let first: u8 = arr[0];
     for col in (0..9).step_by(4) {
-        arr[col] = arr[col+4];
+        arr[col] = arr[col + 4];
     }
     arr[12] = first;
 }
@@ -215,18 +212,16 @@ fn gf_mul(n1: u8, n2: u8) -> u8 {
 }
 
 fn mix_cols(state: &mut [u8]) {
-
     let state_old: Vec<u8> = state.to_vec();
 
     for i in 0..4 {
         for j in 0..4 {
+            let col = 4 * j;
 
-            let col = 4*j;
-
-            state[col..(col+4)][i] = gf_mul(MIX_COLS_MATRIX[i][0], state_old[col..(col+4)][0])
-                                   ^ gf_mul(MIX_COLS_MATRIX[i][1], state_old[col..(col+4)][1])
-                                   ^ gf_mul(MIX_COLS_MATRIX[i][2], state_old[col..(col+4)][2])
-                                   ^ gf_mul(MIX_COLS_MATRIX[i][3], state_old[col..(col+4)][3]);
+            state[col..(col + 4)][i] = gf_mul(MIX_COLS_MATRIX[i][0], state_old[col..(col + 4)][0])
+                ^ gf_mul(MIX_COLS_MATRIX[i][1], state_old[col..(col + 4)][1])
+                ^ gf_mul(MIX_COLS_MATRIX[i][2], state_old[col..(col + 4)][2])
+                ^ gf_mul(MIX_COLS_MATRIX[i][3], state_old[col..(col + 4)][3]);
         }
     }
 }
