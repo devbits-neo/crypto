@@ -121,7 +121,19 @@ fn cipher(state: &mut [u8], expanded_key: &[u32], aes_type: &AesType) {
 
 fn byte_sub(state: &mut [u8]) {
     for byte in state {
-        *byte = S_BOX[((*byte & 0xF0) >> 4) as usize][(*byte & 0x0F) as usize];
+        let row = (((*byte & 0xF0) >> 4) * 16) as usize;
+        let col = (*byte & 0x0F) as usize;
+
+        *byte = S_BOX[row..row + 16][col];
+    }
+}
+
+fn inv_byte_sub(state: &mut [u8]) {
+    for byte in state {
+        let row = (((*byte & 0xF0) >> 4) * 16) as usize;
+        let col = (*byte & 0x0F) as usize;
+
+        *byte = INV_S_BOX[row..row + 16][col];
     }
 }
 
@@ -177,19 +189,35 @@ fn add_round_key(state: &mut [u8], expanded_key: &[u32]) {
     }
 }
 
-fn shift_row(arr: &mut [u8]) {
+fn shift_row_left(arr: &mut [u8]) {
     // left shift
     let first: u8 = arr[0];
-    for col in (0..9).step_by(4) {
+    for col in (0..=8).step_by(4) {
         arr[col] = arr[col + 4];
     }
     arr[12] = first;
+}
+fn shift_row_right(arr: &mut [u8]) {
+    // right shift
+    let last: u8 = arr[12];
+    for col in (8..=0).step_by(4) {
+        arr[col + 4] = arr[col];
+    }
+    arr[0] = last;
 }
 
 fn shift_rows(state: &mut [u8]) {
     for row in 0..4 {
         for _ in 0..row {
-            shift_row(&mut state[row..]);
+            shift_row_left(&mut state[row..]);
+        }
+    }
+}
+
+fn inv_shift_rows(state: &mut [u8]) {
+    for row in 0..4 {
+        for _ in 0..row {
+            shift_row_right(&mut state[row..]);
         }
     }
 }
@@ -204,10 +232,14 @@ fn gf_mul(n1: u8, n2: u8) -> u8 {
         }
     };
     match n1 {
-        1 => n2,
-        2 => gf(n2),
-        3 => gf(n2) ^ n2,
-        _ => 0,
+        0x01 => n2,
+        0x02 => gf(n2),
+        0x03 => gf(n2) ^ n2,
+        0x09 => gf(gf(n2)) ^ ,
+        0x0b => gf(n2) ^ gf(n2) ^ n2,
+        0x0d => gf(n2) ^ gf(n2) ^ n2,
+        0x0e => gf(n2) ^ gf(n2) ^ n2,
+
     }
 }
 
@@ -224,4 +256,43 @@ fn mix_cols(state: &mut [u8]) {
                 ^ gf_mul(MIX_COLS_MATRIX[i][3], state_old[col..(col + 4)][3]);
         }
     }
+}
+
+fn inv_mix_cols(state: &mut [u8]) {
+    let state_old: Vec<u8> = state.to_vec();
+
+    for i in 0..4 {
+        for j in 0..4 {
+            let col = 4 * j;
+
+            state[col..(col + 4)][i] = gf_mul(INV_MIX_COLS_MATRIX[i][0], state_old[col..(col + 4)][0])
+                ^ gf_mul(INV_MIX_COLS_MATRIX[i][1], state_old[col..(col + 4)][1])
+                ^ gf_mul(INV_MIX_COLS_MATRIX[i][2], state_old[col..(col + 4)][2])
+                ^ gf_mul(INV_MIX_COLS_MATRIX[i][3], state_old[col..(col + 4)][3]);
+        }
+    }
+}
+fn decipher(state: &mut [u8], expanded_key: &[u32], aes_type: &AesType) {
+    let loop_num: usize = match aes_type {
+        AesType::AES128 => 10,
+        AesType::AES192 => 12,
+        AesType::AES256 => 14,
+    };
+
+    add_round_key(state, &expanded_key[0..4]);
+
+    // round
+    for round in 1..loop_num {
+        let round_key: &[u32] = &expanded_key[4 * round..(4 * round + 4)];
+
+        inv_byte_sub(state);
+        inv_shift_rows(state);
+        inv_mix_cols(state);
+        add_round_key(state, round_key);
+    }
+
+    // final round
+    inv_byte_sub(state);
+    inv_shift_rows(state);
+    add_round_key(state, &expanded_key[40..44]);
 }
