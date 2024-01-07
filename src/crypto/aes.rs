@@ -1,11 +1,10 @@
+use crate::crypto::cfg::aes_cfg::*;
+
 pub enum AesType {
     AES128,
     AES192,
     AES256,
 }
-
-mod aes_cfg;
-use aes_cfg::*;
 
 #[cfg(test)]
 mod aes_tests {
