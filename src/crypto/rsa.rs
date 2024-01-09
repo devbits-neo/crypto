@@ -1,4 +1,4 @@
-use num_bigint::{BigUint, ToBigInt};
+use num_bigint::{BigUint, RandBigInt, ToBigInt, ToBigUint};
 use num_integer::Integer;
 
 #[cfg(test)]
@@ -8,10 +8,15 @@ mod rsa_tests {
     fn rsa_test() {
         let r = Rsa::new();
         let msg = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY");
-        println!("plaintext: {:?}\n", msg.as_bytes());
+        println!(
+            "plaintext: {:?}\nlength: {}",
+            msg.as_bytes(),
+            msg.as_bytes().len()
+        );
         let ciphertext = r.enc(&msg.as_bytes());
         let plaintext = r.dec(&ciphertext);
 
+        println!("ciphertext: {:?}\nlength: {}", ciphertext, ciphertext.len());
         assert_eq!(msg.as_bytes(), plaintext,);
     }
 }
@@ -26,14 +31,55 @@ pub struct Rsa {
 }
 
 impl Rsa {
-    //fn gen_key(p: BigNum, q: BigNum) -> Rsa {
+    fn gen_prime_num() -> BigUint {
+        let mut rng = rand::thread_rng();
+        let mut big_uint: BigUint;
+        loop {
+            big_uint = rng.gen_biguint(32);
 
-    //}
+            if big_uint.clone() % 6.to_biguint().unwrap() != 1.to_biguint().unwrap()
+                && big_uint.clone() % 6.to_biguint().unwrap() != 5.to_biguint().unwrap()
+            {
+                println!("inside");
+                continue;
+            }
 
-    pub fn new() -> Rsa {
-        let p: BigUint = BigUint::parse_bytes(b"106697219132480173106064317148705638676529121742557567770857687729397446898790451577487723991083173010242416863238099716044775658681981821407922722052778958942891831033512463262741053961681512908218003840408526915629689432111480588966800949428079015682624591636010678691927285321708935076221951173426894836169", 10).unwrap();
-        let q: BigUint = BigUint::parse_bytes(b"144819424465842307806353672547344125290716753535239658417883828941232509622838692761917211806963011168822281666033695157426515864265527046213326145174398018859056439431422867957079149967592078894410082695714160599647180947207504108618794637872261572262805565517756922288320779308895819726074229154002310375209", 10).unwrap();
-        let e: BigUint = BigUint::parse_bytes(b"10001", 16).unwrap();
+            if big_uint.is_even() {
+                println!("inside2");
+                continue;
+            }
+            let root: BigUint = big_uint.sqrt();
+            let mut factor: BigUint = 5.to_biguint().unwrap();
+            let mut is_prime: bool = true;
+
+            println!("big_uint: {:?}\nroot: {:?}\n\n", big_uint, root);
+            loop {
+                if (root.clone() % factor.clone()) == 0.to_biguint().unwrap()
+                    || (root.clone() % (factor.clone() + 2u8).clone()) == 0.to_biguint().unwrap()
+                {
+                    is_prime = false;
+                    break;
+                } else {
+                    factor += 6u8;
+                }
+
+                // println!("{:?}", factor);
+                if factor > root {
+                    break;
+                }
+            }
+
+            if is_prime {
+                break;
+            }
+        }
+        big_uint
+    }
+
+    fn gen_key() -> (Key, Key) {
+        let p: BigUint = Self::gen_prime_num();
+        let q: BigUint = Self::gen_prime_num();
+        let e: BigUint = BigUint::parse_bytes(b"5", 16).unwrap();
 
         let n = p.clone() * q.clone();
         let fi = (p.clone() - 1 as u8) * (q.clone() - 1 as u8);
@@ -47,19 +93,22 @@ impl Rsa {
         if d < 0.to_bigint().unwrap() {
             d = d + fi.to_bigint().unwrap();
         }
-        Rsa {
-            pri_key: Key(d.to_biguint().unwrap(), n.clone()),
-            pub_key: Key(e, n),
-        }
+        (Key(d.to_biguint().unwrap(), n.clone()), Key(e, n))
+    }
+
+    pub fn new() -> Self {
+        let (pri_key, pub_key) = Self::gen_key();
+        Self { pri_key, pub_key }
     }
     pub fn enc(&self, msg: &[u8]) -> Vec<u8> {
         let mut cipher_text: Vec<u8> = Vec::new();
         let mut msg_blocks: Vec<Vec<u8>> = Vec::new();
 
-        for chunk in msg.chunks(256) {
+        for chunk in msg.chunks(8) {
             msg_blocks.push(chunk.to_vec());
         }
         for block in msg_blocks {
+            println!("{:?}", &block);
             let temp = BigUint::from_bytes_be(&block);
 
             let a = temp.modpow(&self.pri_key.0, &self.pri_key.1);
@@ -71,7 +120,7 @@ impl Rsa {
         let mut plain_text: Vec<u8> = Vec::new();
         let mut ctext_blocks: Vec<Vec<u8>> = Vec::new();
 
-        for chunk in cipher_text.chunks(256) {
+        for chunk in cipher_text.chunks(8) {
             ctext_blocks.push(chunk.to_vec());
         }
         for block in ctext_blocks {
