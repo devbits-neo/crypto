@@ -5,24 +5,69 @@ use crate::crypto::cfg::sha_cfg::{
 use std::{u128, usize};
 
 #[cfg(test)]
-mod hash_test {
+mod sha_tests {
     use super::{sha, ShaType};
     #[test]
-    fn hash() {
-        let query = &String::from("sha256");
-
-        let sha_type = match query.as_str() {
-            "sha224" => ShaType::SHA224,
-            "sha256" => ShaType::SHA256,
-            "sha384" => ShaType::SHA384,
-            "sha512" => ShaType::SHA512,
-            _ => ShaType::SHA256,
-        };
-
+    fn sha224() {
         let message: String = String::from("SUNYSUNYSUNYSUNY");
+        let hash_bytes: Vec<u8> = sha(&message, ShaType::SHA224);
+        let mut hash_hex_str: String = String::new();
+
+        for byte in hash_bytes {
+            hash_hex_str.push_str(&format!("{:02x}", byte))
+        }
+
         assert_eq!(
-            sha(&message, sha_type),
+            hash_hex_str,
+            String::from("678669c52c658fba0da32398376f700f367d2adf82291a269308f168")
+        );
+    }
+
+    #[test]
+    fn sha256() {
+        let message: String = String::from("SUNYSUNYSUNYSUNY");
+        let hash_bytes: Vec<u8> = sha(&message, ShaType::SHA256);
+        let mut hash_hex_str: String = String::new();
+
+        for byte in hash_bytes {
+            hash_hex_str.push_str(&format!("{:02x}", byte))
+        }
+
+        assert_eq!(
+            hash_hex_str,
             String::from("142ea313267fe7670d878726214c30b6850a1e189edeff9cd4f769ba02371180")
+        );
+    }
+
+    #[test]
+    fn sha384() {
+        let message: String = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY");
+
+        let hash_bytes: Vec<u8> = sha(&message, ShaType::SHA384);
+        let mut hash_hex_str: String = String::new();
+
+        for byte in hash_bytes {
+            hash_hex_str.push_str(&format!("{:02x}", byte))
+        }
+
+        assert_eq!(
+            hash_hex_str,
+            String::from("b206401fad03e08d606bce8eab03f5116e01963dc5af6c8162b4020bc2a98c1ed7417399a0d611d259c04a6e6868f0e4")
+        );
+    }
+    #[test]
+    fn sha512() {
+        let message: String = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY");
+        let hash_bytes: Vec<u8> = sha(&message, ShaType::SHA512);
+        let mut hash_hex_str: String = String::new();
+
+        for byte in hash_bytes {
+            hash_hex_str.push_str(&format!("{:02x}", byte))
+        }
+
+        assert_eq!(
+            hash_hex_str,
+            String::from("e8d877cad3ada1877203bec43cad9fe6fba800b91afcf874069d0c5559ac4efd3645009564fe7490c0f13c6aa4c069e0d3aed4ea2dc36af77696008602ff459e")
         );
     }
 }
@@ -33,42 +78,42 @@ pub enum ShaType {
     SHA512,
 }
 
-pub fn sha(message: &str, sha_type: ShaType) -> String {
+pub fn sha(message: &str, sha_type: ShaType) -> Vec<u8> {
     let mut message_padding: Vec<u8> = Vec::from(message);
 
     // padding msg regardless of whether length of msg meet with expectation
     padding(&mut message_padding, &sha_type);
 
-    let mut hash_str = String::new();
+    let mut res: Vec<u8> = Vec::new();
 
     match sha_type {
         ShaType::SHA224 => {
             let hash: [u32; 8] = iteration_64(&message_padding, &HASH224_INIT_VALUES, &K_224_256);
             for word in hash.into_iter().take(7) {
-                hash_str.push_str(&format!("{:08x}", word))
+                res.append(&mut word.to_be_bytes().to_vec());
             }
         }
         ShaType::SHA256 => {
             let hash: [u32; 8] = iteration_64(&message_padding, &HASH256_INIT_VALUES, &K_224_256);
             for word in hash {
-                hash_str.push_str(&format!("{:08x}", word))
+                res.append(&mut word.to_be_bytes().to_vec());
             }
         }
         ShaType::SHA384 => {
             let hash: [u64; 8] = iteration_80(&message_padding, &HASH384_INIT_VALUES, &K_384_512);
             for word in hash.into_iter().take(6) {
-                hash_str.push_str(&format!("{:016x}", word))
+                res.append(&mut word.to_be_bytes().to_vec());
             }
         }
         ShaType::SHA512 => {
             let hash: [u64; 8] = iteration_80(&message_padding, &HASH512_INIT_VALUES, &K_384_512);
             for word in hash {
-                hash_str.push_str(&format!("{:016x}", word))
+                res.append(&mut word.to_be_bytes().to_vec());
             }
         }
     };
 
-    hash_str
+    res
 }
 
 fn padding(message: &mut Vec<u8>, sha_type: &ShaType) {
