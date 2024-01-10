@@ -1,10 +1,19 @@
-use ::crypto_lib::crypto::rsa::{Rsa};
+use ::crypto_lib::crypto::rsa::Rsa;
 fn main() {
-    let r = Rsa::new();
     let msg = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY");
-    println!("plaintext: {:?}\n", msg.as_bytes());
+    println!(
+        "plaintext: {:?}\n length: {}\n",
+        msg.as_bytes(),
+        msg.as_bytes().len()
+    );
+    let r = Rsa::new();
     let ciphertext = r.enc(&msg.as_bytes());
     let plaintext = r.dec(&ciphertext);
 
+    println!(
+        "plaintext: {:?}\n, length: {}\n",
+        plaintext,
+        plaintext.len()
+    );
     assert_eq!(msg.as_bytes(), plaintext,);
 }
