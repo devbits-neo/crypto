@@ -12,9 +12,10 @@ mod aes_tests {
     #[test]
     fn aes_ecb_test() {
         let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
-        let aes_key = String::from("abcdabcdabcdabcd").into_bytes();
+        let aes_key: Vec<u8> = String::from("abcdabcdabcdabcd").into_bytes();
+        let aes_type: AesType = AesType::AES128;
 
-        let ciphered_bytes: Vec<u8> = aes_ecb_enc(&plain_text, &aes_key, AesType::AES128);
+        let ciphered_bytes: Vec<u8> = aes_ecb_enc(&plain_text, &aes_key, &aes_type);
 
         let mut ciphered_hex_str: String = String::new();
 
@@ -27,7 +28,7 @@ mod aes_tests {
             String::from("30e1afaf9c36e4814f2abfd05c76cf12")
         );
 
-        let deciphered_bytes: Vec<u8> = aes_ecb_dec(&ciphered_bytes, &aes_key, AesType::AES128);
+        let deciphered_bytes: Vec<u8> = aes_ecb_dec(&ciphered_bytes, &aes_key, &aes_type);
 
         let mut deciphered_str: String = String::new();
 
@@ -41,10 +42,12 @@ mod aes_tests {
     fn aes_cbc_test() {
         let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
         let aes_key = String::from("abcdabcdabcdabcd").into_bytes();
+        let aes_type: AesType = AesType::AES128;
         let iv = String::from("abcdabcdabcdabcd").into_bytes();
-        let ciphered_bytes: Vec<u8> = aes_cbc_enc(&plain_text, &aes_key, &iv, AesType::AES128);
 
-        let mut ciphered_hex_str = String::new();
+        let ciphered_bytes: Vec<u8> = aes_cbc_enc(&plain_text, &aes_key, &iv, &aes_type);
+
+        let mut ciphered_hex_str: String = String::new();
 
         for byte in ciphered_bytes.clone() {
             ciphered_hex_str.push_str(&format!("{:02x}", byte))
@@ -55,7 +58,7 @@ mod aes_tests {
         );
 
         let deciphered_bytes: Vec<u8> =
-            aes_cbc_dec(&ciphered_bytes, &aes_key, &iv, AesType::AES128);
+            aes_cbc_dec(&ciphered_bytes, &aes_key, &iv, &aes_type);
 
         let mut deciphered_str: String = String::new();
 
@@ -67,7 +70,7 @@ mod aes_tests {
     }
 }
 
-pub fn aes_ecb_enc(message: &str, key: &[u8], aes_type: AesType) -> Vec<u8> {
+pub fn aes_ecb_enc(message: &str, key: &[u8], aes_type: &AesType) -> Vec<u8> {
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
     let mut res: Vec<u8> = Vec::new();
@@ -86,7 +89,7 @@ pub fn aes_ecb_enc(message: &str, key: &[u8], aes_type: AesType) -> Vec<u8> {
     res
 }
 
-pub fn aes_ecb_dec(ciphered_bytes: &[u8], key: &[u8], aes_type: AesType) -> Vec<u8> {
+pub fn aes_ecb_dec(ciphered_bytes: &[u8], key: &[u8], aes_type: &AesType) -> Vec<u8> {
     let mut blocks: Vec<Vec<u8>> = Vec::new();
 
     let mut res: Vec<u8> = Vec::new();
@@ -105,7 +108,7 @@ pub fn aes_ecb_dec(ciphered_bytes: &[u8], key: &[u8], aes_type: AesType) -> Vec<
     res
 }
 
-pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: AesType) -> Vec<u8> {
+pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: &AesType) -> Vec<u8> {
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
     for chunk in message.as_bytes().chunks(16) {
@@ -115,11 +118,11 @@ pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: AesType) -> V
     let mut res: Vec<u8> = Vec::new();
 
     let expanded_key: Vec<u32> = key_expansion(&key);
-    let mut temp_state: Vec<u8> = Vec::new();
+    let mut pre_state: Vec<u8> = Vec::new();
 
     for (i, mut state) in message_blocks.iter_mut().enumerate() {
         if i != 0 {
-            for (j, byte) in temp_state.iter().enumerate() {
+            for (j, byte) in pre_state.iter().enumerate() {
                 state[j] ^= byte;
             }
         } else {
@@ -129,13 +132,13 @@ pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: AesType) -> V
         }
         cipher(&mut state, &expanded_key, &aes_type);
         res.append(state);
-        temp_state = state.clone();
+        pre_state = state.clone();
     }
 
     res
 }
 
-pub fn aes_cbc_dec(ciphered_bytes: &[u8], key: &[u8], iv: &[u8], aes_type: AesType) -> Vec<u8> {
+pub fn aes_cbc_dec(ciphered_bytes: &[u8], key: &[u8], iv: &[u8], aes_type: &AesType) -> Vec<u8> {
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
     for chunk in ciphered_bytes.chunks(16) {
