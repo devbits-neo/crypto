@@ -15,7 +15,7 @@ mod aes_tests {
         let aes_key: Vec<u8> = String::from("abcdabcdabcdabcd").into_bytes();
         let aes_type: AesType = AesType::AES128;
 
-        let ciphered_bytes: Vec<u8> = aes_ecb_enc(&plain_text, &aes_key, &aes_type);
+        let ciphered_bytes: Vec<u8> = aes_ecb_enc(&plain_text.clone().into_bytes(), &aes_key, &aes_type);
 
         let mut ciphered_hex_str: String = String::new();
 
@@ -41,11 +41,11 @@ mod aes_tests {
     #[test]
     fn aes_cbc_test() {
         let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
-        let aes_key = String::from("abcdabcdabcdabcd").into_bytes();
+        let aes_key: Vec<u8> = String::from("abcdabcdabcdabcd").into_bytes();
         let aes_type: AesType = AesType::AES128;
         let iv = String::from("abcdabcdabcdabcd").into_bytes();
 
-        let ciphered_bytes: Vec<u8> = aes_cbc_enc(&plain_text, &aes_key, &iv, &aes_type);
+        let ciphered_bytes: Vec<u8> = aes_cbc_enc(&plain_text.clone().into_bytes(), &aes_key, &iv, &aes_type);
 
         let mut ciphered_hex_str: String = String::new();
 
@@ -70,12 +70,14 @@ mod aes_tests {
     }
 }
 
-pub fn aes_ecb_enc(message: &str, key: &[u8], aes_type: &AesType) -> Vec<u8> {
+
+pub fn aes_ecb_enc(plain_text: &[u8], key: &[u8], aes_type: &AesType) -> Vec<u8> {
+
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
     let mut res: Vec<u8> = Vec::new();
 
-    for chunk in message.as_bytes().chunks(16) {
+    for chunk in plain_text.chunks(16) {
         message_blocks.push(chunk.to_vec());
     }
 
@@ -108,10 +110,11 @@ pub fn aes_ecb_dec(ciphered_bytes: &[u8], key: &[u8], aes_type: &AesType) -> Vec
     res
 }
 
-pub fn aes_cbc_enc(message: &str, key: &[u8], iv: &[u8], aes_type: &AesType) -> Vec<u8> {
+pub fn aes_cbc_enc(plain_text: &[u8], key: &[u8], iv: &[u8], aes_type: &AesType) -> Vec<u8> {
+
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
-    for chunk in message.as_bytes().chunks(16) {
+    for chunk in plain_text.chunks(16) {
         message_blocks.push(chunk.to_vec());
     }
 
