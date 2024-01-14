@@ -1,4 +1,4 @@
-use crate::crypto::cfg::aes_cfg::{INV_MIX_COLS_MATRIX, INV_S_BOX, MIX_COLS_MATRIX, RCON, S_BOX};
+use crate::cfg::aes_cfg::{INV_MIX_COLS_MATRIX, INV_S_BOX, MIX_COLS_MATRIX, RCON, S_BOX};
 
 pub enum AesType {
     AES128,
@@ -15,7 +15,8 @@ mod aes_tests {
         let aes_key: Vec<u8> = String::from("abcdabcdabcdabcd").into_bytes();
         let aes_type: AesType = AesType::AES128;
 
-        let ciphered_bytes: Vec<u8> = aes_ecb_enc(&plain_text.clone().into_bytes(), &aes_key, &aes_type);
+        let ciphered_bytes: Vec<u8> =
+            aes_ecb_enc(&plain_text.clone().into_bytes(), &aes_key, &aes_type);
 
         let mut ciphered_hex_str: String = String::new();
 
@@ -45,7 +46,8 @@ mod aes_tests {
         let aes_type: AesType = AesType::AES128;
         let iv = String::from("abcdabcdabcdabcd").into_bytes();
 
-        let ciphered_bytes: Vec<u8> = aes_cbc_enc(&plain_text.clone().into_bytes(), &aes_key, &iv, &aes_type);
+        let ciphered_bytes: Vec<u8> =
+            aes_cbc_enc(&plain_text.clone().into_bytes(), &aes_key, &iv, &aes_type);
 
         let mut ciphered_hex_str: String = String::new();
 
@@ -57,8 +59,7 @@ mod aes_tests {
             String::from("8131ea8c4597cfcfdc096a878e65d35b")
         );
 
-        let deciphered_bytes: Vec<u8> =
-            aes_cbc_dec(&ciphered_bytes, &aes_key, &iv, &aes_type);
+        let deciphered_bytes: Vec<u8> = aes_cbc_dec(&ciphered_bytes, &aes_key, &iv, &aes_type);
 
         let mut deciphered_str: String = String::new();
 
@@ -70,9 +71,7 @@ mod aes_tests {
     }
 }
 
-
 pub fn aes_ecb_enc(plain_text: &[u8], key: &[u8], aes_type: &AesType) -> Vec<u8> {
-
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
     let mut res: Vec<u8> = Vec::new();
@@ -111,7 +110,6 @@ pub fn aes_ecb_dec(ciphered_bytes: &[u8], key: &[u8], aes_type: &AesType) -> Vec
 }
 
 pub fn aes_cbc_enc(plain_text: &[u8], key: &[u8], iv: &[u8], aes_type: &AesType) -> Vec<u8> {
-
     let mut message_blocks: Vec<Vec<u8>> = Vec::new();
 
     for chunk in plain_text.chunks(16) {

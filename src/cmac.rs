@@ -1,13 +1,14 @@
-use crate::crypto::aes::{aes_ecb_enc, AesType};
+use crate::aes::{aes_ecb_enc, AesType};
 #[cfg(test)]
 mod cmac_tests {
     use super::*;
     #[test]
     fn cmac_aes_ecb_128_test() {
-
         let plaintext: Vec<u8> = String::from("SUNYSUNYSUNYSUNY").into_bytes();
-        let key: [u8; 16] = 
-            [ 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04,0x01, 0x02, 0x03, 0x04];
+        let key: [u8; 16] = [
+            0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02,
+            0x03, 0x04,
+        ];
         let aes_type: AesType = AesType::AES128;
 
         let cmac_bytes: Vec<u8> = cmac(&plaintext, &key, &aes_type);
@@ -18,13 +19,11 @@ mod cmac_tests {
             cmac_str.push_str(&format!("{:02x}", byte))
         }
 
-
         assert_eq!(cmac_str, String::from("d8280d163fd468f32b293915e7bcc102"));
     }
 }
 
 pub fn cmac(plaintext: &[u8], key: &[u8], aes_type: &AesType) -> Vec<u8> {
-
     let zero_128: [u8; 16] = [0; 16];
     let l: Vec<u8> = aes_ecb_enc(&zero_128, &key, aes_type);
 

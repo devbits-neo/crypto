@@ -1,4 +1,4 @@
-use crate::crypto::cfg::sha_cfg::{
+use crate::cfg::sha_cfg::{
     HASH224_INIT_VALUES, HASH256_INIT_VALUES, HASH384_INIT_VALUES, HASH512_INIT_VALUES, K_224_256,
     K_384_512,
 };
