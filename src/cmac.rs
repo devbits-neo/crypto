@@ -6,8 +6,8 @@ mod cmac_tests {
     #[test]
     fn cmac_aes_ecb_128_test() {
         // let plaintext: Vec<u8> = String::from("SUNYSUNYSUNYSUNYJILQJILQJILQJILQ").into_bytes();
-        let plaintext: Vec<u8> = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY").into_bytes();
-        // let plaintext: Vec<u8> = String::from("SUNYSUNYSUNYSUNY").into_bytes();
+        // let plaintext: Vec<u8> = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY").into_bytes();
+        let plaintext: Vec<u8> = String::from("SUNYSUNYSUNYSUNY").into_bytes();
         // let plaintext: Vec<u8> = String::from("SUNY").into_bytes();
         // let plaintext: Vec<u8> = String::from("SUNYSUNYSUNYSUNYJILQ").into_bytes();
         let key: [u8; 16] = [
@@ -24,7 +24,7 @@ mod cmac_tests {
             cmac_str.push_str(&format!("{:02x}", byte))
         }
 
-        assert_eq!(cmac_str, String::from("a0ec1cca5c501df17cc71ce05cac82c6"));
+        assert_eq!(cmac_str, String::from("d8280d163fd468f32b293915e7bcc102"));
     }
 }
 
