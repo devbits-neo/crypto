@@ -4,3 +4,4 @@ pub mod cmac;
 pub mod rsa;
 pub mod sha;
 pub mod padding;
+pub mod aes_mp;
