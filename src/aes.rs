@@ -41,7 +41,7 @@ mod aes_tests {
     }
     #[test]
     fn aes_cbc_test() {
-        let plain_text: String = String::from("SUNYSUNYSUNYSUNY");
+        let plain_text: String = String::from("SUNYSUNYSUNYSUNYSUNYSUNYSUNYSUNY");
         let aes_key: Vec<u8> = String::from("abcdabcdabcdabcd").into_bytes();
         let aes_type: AesType = AesType::AES128;
         let iv = String::from("abcdabcdabcdabcd").into_bytes();
@@ -56,7 +56,7 @@ mod aes_tests {
         }
         assert_eq!(
             ciphered_hex_str,
-            String::from("8131ea8c4597cfcfdc096a878e65d35b")
+            String::from("8131ea8c4597cfcfdc096a878e65d35b9bf68b2edcd9d80812bb8a9253d4cb45")
         );
 
         let deciphered_bytes: Vec<u8> = aes_cbc_dec(&ciphered_bytes, &aes_key, &iv, &aes_type);
@@ -132,7 +132,7 @@ pub fn aes_cbc_enc(plain_text: &[u8], key: &[u8], iv: &[u8], aes_type: &AesType)
             }
         }
         cipher(&mut state, &expanded_key, &aes_type);
-        res.append(state);
+        res.append(&mut state.clone());
         pre_state = state.clone();
     }
 
@@ -149,21 +149,25 @@ pub fn aes_cbc_dec(ciphered_bytes: &[u8], key: &[u8], iv: &[u8], aes_type: &AesT
     let mut res: Vec<u8> = Vec::new();
 
     let expanded_key: Vec<u32> = key_expansion(&key);
+    #[allow(unused_assignments)]
     let mut temp_state: Vec<u8> = Vec::new();
-
-    for (i, mut state) in message_blocks.iter_mut().enumerate() {
-        decipher(&mut state, &expanded_key, &aes_type);
+    let mut pre_state: Vec<u8> = Vec::new();
+    for (i, state) in message_blocks.iter_mut().enumerate() {
+        temp_state = state.clone();
+        decipher(&mut temp_state, &expanded_key, &aes_type);
         if i != 0 {
-            for (j, byte) in temp_state.iter().enumerate() {
-                state[j] ^= byte;
+            for (j, byte) in pre_state.iter().enumerate() {
+                temp_state[j] ^= byte;
             }
         } else {
             for (j, byte) in iv.iter().enumerate() {
-                state[j] ^= byte;
+                temp_state[j] ^= byte;
             }
         }
-        res.append(state);
-        temp_state = state.clone();
+        
+        res.append(&mut temp_state.clone());
+        pre_state = state.to_vec();
+
     }
 
     res
