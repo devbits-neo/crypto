@@ -1,4 +1,4 @@
-use crate::aes::{aes_cbc_enc, AesType};
+use crate::aes::{aes_cbc_enc, aes_ecb_enc, AesType};
 use crate::aes_mp::mp_compression;
 use crate::cfg::mem_update_cfg::{KEY_UPDATE_ENC_C, KEY_UPDATE_MAC_C};
 use crate::cmac::cmac;
@@ -39,18 +39,21 @@ impl MemUpdate {
     ) -> Self {
         let k1: [u8; 16] = kdf(key_auth, &KEY_UPDATE_ENC_C[0..6]);
         let k2: [u8; 16] = kdf(key_auth, &KEY_UPDATE_MAC_C[0..6]);
-        let k3: [u8; 16] = [0; 16];
-        let k4: [u8; 16] = [0; 16];
+        let k3: [u8; 16] = kdf(key_new, &KEY_UPDATE_ENC_C[0..6]);
+        let k4: [u8; 16] = kdf(key_new, &KEY_UPDATE_MAC_C[0..6]);
         let mut m1: [u8; 16] = [0; 16];
         let iv: [u8; 16] = [0; 16];
         let mut m2_raw: [u8; 32] = [0; 32];
 
+        // generate M1 begin
         for (i, byte) in uid.iter().enumerate() {
             m1[i] = *byte;
         }
 
         m1[15] = (she_id << 4) | (auth_id & 0x0F);
+        // generate M1 end
 
+        // generate M2 begin
         let counter_bytes: [u8; 4] = (counter << 4).to_be_bytes();
 
         for (i, byte) in counter_bytes.iter().enumerate() {
@@ -73,14 +76,34 @@ impl MemUpdate {
             m2_raw[i + 16] = *byte;
         }
 
+
         let m2: [u8; 32] = aes_cbc_enc(&m2_raw, &k1, &iv, &AesType::AES128)
             .try_into()
             .unwrap();
+        // generate M2 end
+
+        // generate M3 begin
         let mut m3_raw: Vec<u8> = m1.to_vec();
         m3_raw.append(&mut m2.to_vec());
         let m3: [u8; 16] = cmac(&m3_raw, &k2, &AesType::AES128).try_into().unwrap();
-        let m4: [u8; 32] = [0; 32];
-        let m5: [u8; 16] = [0; 16];
+        // generate M3 end
+
+        // generate M4 begin
+        let mut m4: Vec<u8> = m1.to_vec();
+        let mut m4_star_raw: [u8; 16] = [0; 16];
+        for (i, byte) in counter_bytes.iter().enumerate() {
+            m4_star_raw[i] = *byte;
+        }
+        m4_star_raw[3] |= 0x08;
+        
+        let mut m4_star: Vec<u8> = aes_ecb_enc(&m4_star_raw, &k3, &AesType::AES128);
+        m4.append(&mut m4_star);
+        let m4: [u8; 32] = m4.try_into().unwrap();
+        // generate M4 end 
+
+        // generate M5 begin
+        let m5: [u8; 16] = cmac(&m4, &k4, &AesType::AES128).try_into().unwrap();
+        // generate M5 end
 
         MemUpdate {
             k1,
@@ -112,10 +135,6 @@ mod mem_update_tests {
             0x01, 0x00,
         ];
 
-        // let key_new: [u8; 16] = [
-        //     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
-        //     0x0e, 0x0f,
-        // ];
         let key_auth: [u8; 16] = [
             0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
             0x0e, 0x0f,
@@ -134,8 +153,6 @@ mod mem_update_tests {
         let mem_update: MemUpdate = MemUpdate::new(
             &key_auth, &key_new, counter, she_id, auth_id, &uid, &key_flags,
         );
-        println!("{:?}", &mem_update);
-
         dbg!(&mem_update);
     }
 }
