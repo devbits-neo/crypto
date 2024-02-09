@@ -104,15 +104,15 @@ mod base64_tests {
         for byte in cipered_text.clone() {
             base64_str.push(char::from(byte));
         }
-        for byte in cipered_text.clone() {
+        for byte in cipered_text2.clone() {
             base64_str2.push(char::from(byte));
         }
-        for byte in cipered_text.clone() {
+        for byte in cipered_text3.clone() {
             base64_str3.push(char::from(byte));
         }
         assert_eq!(base64_str, String::from("QSBsYW5ndWFnZSBlbXBvd2VyaW5nIGV2ZXJ5b25lIHRvIGJ1aWxkIHJlbGlhYmxlIGFuZCBlZmZpY2llbnQgc29mdHdhcmUu"));
-        assert_eq!(base64_str2, String::from("QSBsYW5ndWFnZSBlbXBvd2VyaW5nIGV2ZXJ5b25lIHRvIGJ1aWxkIHJlbGlhYmxlIGFuZCBlZmZpY2llbnQgc29mdHdhcmUu"));
-        assert_eq!(base64_str3, String::from("QSBsYW5ndWFnZSBlbXBvd2VyaW5nIGV2ZXJ5b25lIHRvIGJ1aWxkIHJlbGlhYmxlIGFuZCBlZmZpY2llbnQgc29mdHdhcmUu"));
+        assert_eq!(base64_str2, String::from("QSBsYW5ndWFnZSBlbXBvd2VyaW5nIGV2ZXJ5b25lIHRvIGJ1aWxkIHJlbGlhYmxlIGFuZCBlZmZpY2llbnQgc29mdHdhcmUuIA=="));
+        assert_eq!(base64_str3, String::from("QSBsYW5ndWFnZSBlbXBvd2VyaW5nIGV2ZXJ5b25lIHRvIGJ1aWxkIHJlbGlhYmxlIGFuZCBlZmZpY2llbnQgc29mdHdhcmUuICA="));
 
         let text_dec: Vec<u8> = base64_dec(&cipered_text);
         let text_dec2: Vec<u8> = base64_dec(&cipered_text2);
