@@ -1,6 +1,8 @@
+mod mem_update_cfg;
+
 use crate::aes::{aes_cbc_enc, aes_ecb_enc, AesType};
 use crate::aes_mp::mp_compression;
-use crate::cfg::mem_update_cfg::{KEY_UPDATE_ENC_C, KEY_UPDATE_MAC_C};
+use crate::mem_update::mem_update_cfg::{KEY_UPDATE_ENC_C, KEY_UPDATE_MAC_C};
 use crate::cmac::cmac;
 
 #[derive(Debug, Clone, Copy)]
