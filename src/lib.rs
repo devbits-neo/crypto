@@ -4,5 +4,4 @@ pub mod base64;
 pub mod cmac;
 pub mod mem_update;
 pub mod padding;
-pub mod rsa;
 pub mod sha;
